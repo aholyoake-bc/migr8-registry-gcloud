@@ -19,7 +19,7 @@ os.path.abspath('/')
 # Make sure you have these env vars set
 os.environ.get('GCLOUD_URL')
 os.environ.get('REG_URL')
-GCLOUDPATH = '/root/google-cloud-sdk/bin/gcloud'
+GCLOUDPATH = '/usr/bin/gcloud'
 DOCKERPATH = '/usr/bin/docker'
 
 
