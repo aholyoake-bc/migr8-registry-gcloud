@@ -1,1 +1,1 @@
-# migr8-registry-gcloud
+# Migrate from private docker registry to gcloud
