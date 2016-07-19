@@ -13,23 +13,25 @@ import os
 
 os.path.abspath('/')
 
-#  Examples for GCLOUD_URL AND REG_URL   #
+##########################################
+#  Examples for GCLOUD_URL AND REG_URL
 # export GCLOUD_URL="gcr.io/<project-name>/"
 # export REG_URL="docker-registry.example.com:5000/"
+# export GCLOUDPATH = "/usr/bin/gcloud"
+# export DOCKERPATH = "/usr/bin/docker"
 # Make sure you have these env vars set
 os.environ.get('GCLOUD_URL')
 os.environ.get('REG_URL')
-GCLOUDPATH = '/usr/bin/gcloud'
-DOCKERPATH = '/usr/bin/docker'
-
+os.environ.get('GCLOUDPATH')
+os.environ.get('DOCKERPATH')
 
 class MigrateToGcloud():
     # Init some urls and paths for migration then call _get_catalog
     def __init__(self):
         self.REG_URL = os.environ.get('REG_URL')
         self.GCLOUD_URL = os.environ.get('GCLOUD_URL')
-        self.dockerpath = DOCKERPATH
-        self.gcloudpath = GCLOUDPATH
+        self.dockerpath = os.environ.get('DOCKERPATH')
+        self.gcloudpath = os.environ.get('GCLOUDPATH')
         self._get_catalog()
 
     # Get a catalog of repos from your existing repository
