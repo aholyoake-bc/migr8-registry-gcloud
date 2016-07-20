@@ -5,6 +5,7 @@ Running `python migrate.py` will get a list of all available repositories and ve
 
 ### Requirements
 Gcloud sdk must be installed and authenticated.
+Gcloud alpha command group needs to be installed.
 
 You must have a project created with gcloud.
 

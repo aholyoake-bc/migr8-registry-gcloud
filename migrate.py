@@ -25,6 +25,7 @@ os.environ.get('REG_URL')
 os.environ.get('GCLOUDPATH')
 os.environ.get('DOCKERPATH')
 
+
 class MigrateToGcloud():
     # Init some urls and paths for migration then call _get_catalog
     def __init__(self):
@@ -48,11 +49,21 @@ class MigrateToGcloud():
     # primary run function to execute every thing else
     def _run(self, mylist):
         for line in mylist:
+            print(line)
+            print(self.GCLOUD_URL)
+            command = self.gcloudpath + ' alpha container images list-tags ' + self.GCLOUD_URL + line
+            checktags = subprocess.check_output(command, shell=True)
             taglist = self._get_tags(line)
             for tag in taglist:
-                self._download_images(line, tag)
-                self._set_tag(line, tag)
-                self._upload_image(line, tag)
+                tagvalue = self._check_tag(line, tag, checktags)
+                if tagvalue is False:
+                    self._download_images(line, tag)
+                    self._set_tag(line, tag)
+                    self._upload_image(line, tag)
+                else:
+                    print("Found" + line + ' ' + tag +
+                          " is already uploaded to Gcloud. Skipping")
+                    continue
 
     # Get version tags from existing repository so we can migrate all of them
     def _get_tags(self, line):
@@ -64,8 +75,14 @@ class MigrateToGcloud():
         taglist = tagline['tags']
         return taglist
 
+    # Check if the version tag exists in new repository
+    def _check_tag(self, line, tag, checktags):
+        if tag in checktags:
+            return True
+        else:
+            return False
 
-# Download images from existing registry
+    # Download images from existing registry
     def _download_images(self, line, tag):
         print ("######### Downloading " + line + ':' + tag +
                " image from bitesize registry ##########################")
