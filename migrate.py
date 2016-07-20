@@ -50,7 +50,6 @@ class MigrateToGcloud():
     def _run(self, mylist):
         for line in mylist:
             print(line)
-            print(self.GCLOUD_URL)
             command = self.gcloudpath + ' alpha container images list-tags ' + self.GCLOUD_URL + line
             checktags = subprocess.check_output(command, shell=True)
             taglist = self._get_tags(line)
@@ -61,7 +60,7 @@ class MigrateToGcloud():
                     self._set_tag(line, tag)
                     self._upload_image(line, tag)
                 else:
-                    print("Found" + line + ' ' + tag +
+                    print("Found " + line + ' ' + tag +
                           " is already uploaded to Gcloud. Skipping")
                     continue
 
@@ -72,7 +71,10 @@ class MigrateToGcloud():
         io = json.dumps(checktags.text)
         n = json.loads(io)
         tagline = ast.literal_eval(n)
-        taglist = tagline['tags']
+        try:
+            taglist = tagline['tags']
+        except:
+            taglist = tagline['tags'] = 'null'
         return taglist
 
     # Check if the version tag exists in new repository
