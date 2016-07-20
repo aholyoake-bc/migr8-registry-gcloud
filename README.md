@@ -1,6 +1,7 @@
 # Migrate from private docker registry to gcloud
 
 ### Description
+Written in Python:
 Running `python migrate.py` will get a list of all available repositories and version tags from your existing private registry and will push all new repos with images/versions to your Gcloud docker registry
 
 ### Requirements
