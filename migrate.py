@@ -37,7 +37,7 @@ class MigrateToGcloud():
 
     # Get a catalog of repos from your existing repository
     def _get_catalog(self):
-        r = requests.get('https://' + self.REG_URL + 'v2/_catalog')
+        r = requests.get('https://' + self.REG_URL + '/v2/_catalog')
         logging.debug("Test get Catalog: %r", r)
         io = json.dumps(r.text)
         n = json.loads(io)
@@ -50,7 +50,7 @@ class MigrateToGcloud():
     def _run(self, mylist):
         for line in mylist:
             print(line)
-            command = self.gcloudpath + ' alpha container images list-tags ' + self.GCLOUD_URL + line
+            command = self.gcloudpath + ' alpha container images list-tags ' + self.GCLOUD_URL + '/' + line
             checktags = subprocess.check_output(command, shell=True)
             taglist = self._get_tags(line)
             for tag in taglist:
@@ -66,7 +66,7 @@ class MigrateToGcloud():
 
     # Get version tags from existing repository so we can migrate all of them
     def _get_tags(self, line):
-        command = 'https://' + self.REG_URL + 'v2/' + line + '/tags/list'
+        command = 'https://' + self.REG_URL + '/v2/' + line + '/tags/list'
         checktags = requests.get(command)
         io = json.dumps(checktags.text)
         n = json.loads(io)
@@ -90,7 +90,7 @@ class MigrateToGcloud():
                " image from bitesize registry ##########################")
         try:
             command = (self.dockerpath + ' pull ' +
-                       self.REG_URL + line + ':' + tag)
+                       self.REG_URL + '/' + line + ':' + tag)
             subprocess.check_output(command, shell=True)
         except:
             return
@@ -100,8 +100,8 @@ class MigrateToGcloud():
         print ("######### TAGGING " + line + ':' + tag +
                " IMAGE FOR UPLOAD ################")
         try:
-            command = (self.gcloudpath + ' docker tag ' + self.REG_URL + line +
-                       ':' + tag + ' ' + self.GCLOUD_URL + line + ':' + tag)
+            command = (self.gcloudpath + ' docker tag ' + self.REG_URL + '/' + line +
+                       ':' + tag + ' ' + self.GCLOUD_URL + '/' + line + ':' + tag)
             print(command)
             subprocess.check_output(command, shell=True)
         except:
@@ -113,7 +113,7 @@ class MigrateToGcloud():
                " IMAGE UPLOAD TO NEW REPO ###################")
         try:
             command = (self.gcloudpath + ' docker push ' +
-                       self.GCLOUD_URL + line + ':' + tag)
+                       self.GCLOUD_URL + '/' + line + ':' + tag)
             subprocess.check_output(command, shell=True)
         except:
             return

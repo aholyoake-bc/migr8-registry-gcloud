@@ -15,8 +15,8 @@ Private registry you are migrating from should have HTTPS enabled.
 
 Four Environment Variables need to be exported
 ```
-export GCLOUD_URL="gcr.io/<project-name>/"
-export REG_URL="docker-registry.example.com:5000/"
+export GCLOUD_URL="gcr.io/<project-name>"
+export REG_URL="docker-registry.example.com:5000"
 export GCLOUDPATH = "/usr/bin/gcloud"
 export DOCKERPATH = "/usr/bin/docker"
 ```
