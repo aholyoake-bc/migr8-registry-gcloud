@@ -19,3 +19,6 @@ export REG_URL="docker-registry.example.com:5000/"
 export GCLOUDPATH = "/usr/bin/gcloud"
 export DOCKERPATH = "/usr/bin/docker"
 ```
+
+### GCloud SDK install
+[Link to interactive install](https://cloud.google.com/sdk/downloads#interactive)
