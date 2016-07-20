@@ -23,3 +23,18 @@ export DOCKERPATH = "/usr/bin/docker"
 
 ### GCloud SDK install
 [Link to interactive install](https://cloud.google.com/sdk/downloads#interactive)
+
+
+### Troubleshooting
+
+If you see something like the following: You are missing an exported variable.
+
+```
+Traceback (most recent call last):
+  File "./migrate.py", line 122, in <module>
+    MigrateToGcloud()
+  File "./migrate.py", line 36, in __init__
+    self._get_catalog()
+  File "./migrate.py", line 40, in _get_catalog
+    r = requests.get('https://' + self.REG_URL + 'v2/_catalog')
+```
