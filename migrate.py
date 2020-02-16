@@ -18,6 +18,7 @@ os.path.abspath('/')
 #  Examples for GCLOUD_URL AND REG_URL
 # export GCLOUD_URL="gcr.io/<project-name>"
 # export REG_URL="docker-registry.example.com:5000"
+# export REG_PROTOCOL="https://"
 # export GCLOUDPATH="/usr/bin/gcloud"
 # export DOCKERPATH="/usr/bin/docker"
 # Make sure you have these env vars set
@@ -33,6 +34,7 @@ class MigrateToGcloud:
     # Init some urls and paths for migration then call _get_catalog
     def __init__(self):
         self.REG_URL = os.environ.get('REG_URL')
+        self.REG_PROTOCOL = os.environ.get('REG_PROTOCOL')
         self.GCLOUD_URL = os.environ.get('GCLOUD_URL')
         self.dockerpath = os.environ.get('DOCKERPATH')
         self.gcloudpath = os.environ.get('GCLOUDPATH')
@@ -50,7 +52,7 @@ class MigrateToGcloud:
 
     # Get a catalog of repos from your existing repository
     def _get_catalog(self):
-        r = self._request('https://' + self.REG_URL + '/v2/_catalog')
+        r = self._request(self.REG_PROTOCOL + self.REG_URL + '/v2/_catalog')
         logging.debug("Test get Catalog: %r", r)
         io = json.dumps(r.text)
         n = json.loads(io)
@@ -79,7 +81,7 @@ class MigrateToGcloud:
 
     # Get version tags from existing repository so we can migrate all of them
     def _get_tags(self, line):
-        command = 'https://' + self.REG_URL + '/v2/' + line + '/tags/list'
+        command = self.REG_PROTOCOL + self.REG_URL + '/v2/' + line + '/tags/list'
         checktags = self._request.get(command)
         io = json.dumps(checktags.text)
         n = json.loads(io)
