@@ -66,7 +66,7 @@ class MigrateToGcloud:
         for line in mylist:
             print(line)
             command = self.gcloudpath + ' container images list-tags ' + self.GCLOUD_URL + '/' + line
-            checktags = subprocess.check_output(command, shell=True, executable='/bin/bash')
+            checktags = subprocess.check_output(command, shell=True, executable='/bin/bash').decode()
             taglist = self._get_tags(line)
             for tag in taglist:
                 print("{line} {tag}".format(line=line, tag=tag))

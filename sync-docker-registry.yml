@@ -51,8 +51,8 @@ jobs:
             }
             EOF
 
-            echo $SERVICE_ACCOUNT > /creds.json
-            export CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE="/creds.json"
+            echo $SERVICE_ACCOUNT > creds.json
+            gcloud auth activate-service-account --key-file=creds.json
 
             python3 migrate-script/migrate.py
 
