@@ -69,6 +69,7 @@ class MigrateToGcloud:
             checktags = subprocess.check_output(command, shell=True)
             taglist = self._get_tags(line)
             for tag in taglist:
+                print("{line} {tag}".format(line=line, tag=tag))
                 tagvalue = self._check_tag(line, tag, checktags)
                 if tagvalue is False:
                     self._download_images(line, tag)
@@ -82,7 +83,7 @@ class MigrateToGcloud:
     # Get version tags from existing repository so we can migrate all of them
     def _get_tags(self, line):
         command = self.REG_PROTOCOL + self.REG_URL + '/v2/' + line + '/tags/list'
-        checktags = self._request.get(command)
+        checktags = self._request(command)
         io = json.dumps(checktags.text)
         n = json.loads(io)
         tagline = ast.literal_eval(n)

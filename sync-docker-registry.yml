@@ -22,6 +22,8 @@ jobs:
       trigger: true
   - task: sync
     params: 
+      GCLOUDPATH: "gcloud"
+      DOCKERPATH: "docker"
       GCLOUD_URL: "eu.gcr.io/blockchain-internal"
       REG_URL: "docker-registry.service.consul:5000"
       REG_PROTOCOL: "http://"
@@ -40,6 +42,7 @@ jobs:
           - -c
           - |
             #!/bin/bash
+            gcloud components update --quiet
             pip3 install requests
             mkdir -p /etc/docker
             cat << EOF > /etc/docker/daemon.json 
