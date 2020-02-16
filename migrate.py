@@ -66,7 +66,7 @@ class MigrateToGcloud:
         for line in mylist:
             print(line)
             command = self.gcloudpath + ' container images list-tags ' + self.GCLOUD_URL + '/' + line
-            checktags = subprocess.check_output(command, shell=True)
+            checktags = subprocess.check_output(command, shell=True, executable='/bin/bash')
             taglist = self._get_tags(line)
             for tag in taglist:
                 print("{line} {tag}".format(line=line, tag=tag))
@@ -107,7 +107,7 @@ class MigrateToGcloud:
         try:
             command = (self.dockerpath + ' pull ' +
                        self.REG_URL + '/' + line + ':' + tag)
-            subprocess.check_output(command, shell=True)
+            subprocess.check_output(command, shell=True, executable='/bin/bash')
         except:
             return
 
@@ -119,7 +119,7 @@ class MigrateToGcloud:
             command = ('docker tag ' + self.REG_URL + '/' + line +
                        ':' + tag + ' ' + self.GCLOUD_URL + '/' + line + ':' + tag)
             print(command)
-            subprocess.check_output(command, shell=True)
+            subprocess.check_output(command, shell=True, executable='/bin/bash')
         except:
             return
 
@@ -130,7 +130,7 @@ class MigrateToGcloud:
         try:
             command = ('docker push ' +
                        self.GCLOUD_URL + '/' + line + ':' + tag)
-            subprocess.check_output(command, shell=True)
+            subprocess.check_output(command, shell=True, executable='/bin/bash')
         except:
             return
 
