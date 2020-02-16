@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Must have python installed with requestite libs
 # This script assumes you have gcloud sdk installed and
 # the sdk has already be authenticated to gcloud

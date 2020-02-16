@@ -1,0 +1,55 @@
+---
+resources:
+- name: migrate-script
+  type: git
+  source:
+    branch: master
+    private_key: ((private_key_migrate_containers))
+    uri: git@github.com:aholyoake-bc/migr8-registry-gcloud
+
+- name: daily
+  type: time
+  source: {interval: 24h}
+
+
+jobs:
+- name: sync-to-google-registry
+  plan:
+  - in_parallel:
+    - get: migrate-script
+      trigger: true
+    - get: daily
+      trigger: true
+  - task: sync
+    params: 
+      GCLOUD_URL: "eu.gcr.io/blockchain-internal"
+      REG_URL: "docker-registry.service.consul:5000"
+      REG_PROTOCOL: "http://"
+      SERVICE_ACCOUNT: ((container-sync-service-account))
+    config:
+      inputs: 
+      - name: migrate-script
+      platform: linux
+      image_resource:
+        type: docker-image
+        source:
+          repository: google/cloud-sdk
+      run:
+        path: /bin/bash
+        args:
+          - -c
+          - |
+            #!/bin/bash
+            pip3 install requests
+            mkdir -p /etc/docker
+            cat << EOF > /etc/docker/daemon.json 
+            {
+              "insecure-registries" : ["$REG_URL"]
+            }
+            EOF
+
+            echo $SERVICE_ACCOUNT > /creds.json
+            export CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE="/creds.json"
+
+            python3 migrate-script/migrate.py
+
