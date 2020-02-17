@@ -79,6 +79,10 @@ class MigrateToGcloud:
                     print("Found " + line + ' ' + tag +
                           " is already uploaded to Gcloud. Skipping")
                     continue
+            self._clean_up()
+
+    def _clean_up(self):
+        subprocess.check_output('docker system prune', shell=True, executable='/bin/bash')
 
     # Get version tags from existing repository so we can migrate all of them
     def _get_tags(self, line):
@@ -131,6 +135,7 @@ class MigrateToGcloud:
             command = ('docker push ' +
                        self.GCLOUD_URL + '/' + line + ':' + tag)
             subprocess.check_output(command, shell=True, executable='/bin/bash')
+
         except:
             return
 

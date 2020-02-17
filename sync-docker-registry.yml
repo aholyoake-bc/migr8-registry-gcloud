@@ -42,7 +42,26 @@ jobs:
           - -c
           - |
             #!/bin/bash
-            gcloud components update --quiet
+            apt update
+            apt install wget
+
+            export DOCKER_CHANNEL=stable
+            export DOCKER_VERSION=19.03.6
+
+            if ! wget -O docker.tgz "https://download.docker.com/linux/static/${DOCKER_CHANNEL}/x86_64/docker-${DOCKER_VERSION}.tgz"; then 
+            echo >&2 "error: failed to download 'docker-${DOCKER_VERSION}' from '${DOCKER_CHANNEL}'"
+            exit 1
+            fi
+
+            tar --extract
+              --file docker.tgz
+              --strip-components 1
+              --directory /usr/local/bin/
+            ;
+            rm docker.tgz
+
+            dockerd &> dockerd-log.log &
+
             pip3 install requests
             mkdir -p /etc/docker
             cat << EOF > /etc/docker/daemon.json 
