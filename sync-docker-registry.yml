@@ -27,7 +27,9 @@ jobs:
       GCLOUD_URL: "eu.gcr.io/blockchain-internal"
       REG_URL: "docker-registry.service.consul:5000"
       REG_PROTOCOL: "http://"
+      DOCKER_HOST: unix:///var/run/docker.sock
       SERVICE_ACCOUNT: ((container-sync-service-account))
+    privileged: true
     config:
       inputs: 
       - name: migrate-script
@@ -42,25 +44,23 @@ jobs:
           - -c
           - |
             #!/bin/bash
-            apt update
-            apt install wget
+            echo "${SERVICE_ACCOUNT}" > creds.json
+            
+            apt-get update -y
+            apt-get install -y \
+            apt-transport-https \
+            ca-certificates \
+            curl \
+            gnupg2 \
+            software-properties-common
+            curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+            sudo add-apt-repository \
+            "deb [arch=amd64] https://download.docker.com/linux/debian \
+            $(lsb_release -cs) \
+            stable"
 
-            export DOCKER_CHANNEL=stable
-            export DOCKER_VERSION=19.03.6
-
-            if ! wget -O docker.tgz "https://download.docker.com/linux/static/${DOCKER_CHANNEL}/x86_64/docker-${DOCKER_VERSION}.tgz"; then 
-            echo >&2 "error: failed to download 'docker-${DOCKER_VERSION}' from '${DOCKER_CHANNEL}'"
-            exit 1
-            fi
-
-            tar --extract
-              --file docker.tgz
-              --strip-components 1
-              --directory /usr/local/bin/
-            ;
-            rm docker.tgz
-
-            dockerd &> dockerd-log.log &
+            apt-get update
+            apt-get install docker-ce docker-ce-cli containerd.io
 
             pip3 install requests
             mkdir -p /etc/docker
@@ -70,8 +70,8 @@ jobs:
             }
             EOF
 
-            echo $SERVICE_ACCOUNT > creds.json
+            dockerd &> dockerd.log &
+
             gcloud auth activate-service-account --key-file=creds.json
 
             python3 migrate-script/migrate.py
-
