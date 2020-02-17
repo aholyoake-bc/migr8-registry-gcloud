@@ -82,7 +82,10 @@ class MigrateToGcloud:
             self._clean_up()
 
     def _clean_up(self):
-        subprocess.check_output('docker system prune', shell=True, executable='/bin/bash')
+        try:
+           subprocess.check_output('docker system prune -f', shell=True, executable='/bin/bash')
+        except:
+           return
 
     # Get version tags from existing repository so we can migrate all of them
     def _get_tags(self, line):
