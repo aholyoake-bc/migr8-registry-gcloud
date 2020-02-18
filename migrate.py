@@ -123,7 +123,7 @@ class MigrateToGcloud:
         while page_url:
             print(page_url)
             r = self.request(page_url)
-            page_url = r.links.get("next")
+            page_url = r.links.get("next", None)
             pages.append(r.json)
 
     def request(self,uri):
