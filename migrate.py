@@ -111,9 +111,20 @@ class MigrateToGcloud:
     
         plist = [(r,t) for r,tt in all_tags.items() for t in tt]
 
-        with Pool(8) as p:
+        with Pool(24) as p:
             list(tqdm.tqdm(p.imap(upload, plist), total=len(plist)))
 
+    def paginate(self,url):
+        pagesize = 100
+        link = True
+        page_url = url + '?n={}'.format(n)
+
+        pages = []
+        while page_url:
+            print(page_url)
+            r = self.request(page_url)
+            page_url = r.links.get("next")
+            pages.append(r.json)
 
     def request(self,uri):
         return requests.get(uri)
@@ -121,9 +132,8 @@ class MigrateToGcloud:
 
     # Get a catalog of repos from your existing repository
     def catalog(self):
-        r = self.request(self.REG_PROTOCOL + self.REG_URL + '/v2/_catalog')
-        a = r.json()
-        return a['repositories']
+        r = self.paginate(self.REG_PROTOCOL + self.REG_URL + '/v2/_catalog')
+        return [rr for a in r for rr in r['repositories']]
         
     def existing_tags(self, repo):
         command = self.gcloudpath + ' container images list-tags --format=json ' + self.GCLOUD_URL + '/' + repo
@@ -137,7 +147,8 @@ class MigrateToGcloud:
     def tags(self, repo):
         print('Fetching tags for {}'.format(repo))
         command = self.REG_PROTOCOL + self.REG_URL + '/v2/' + repo + '/tags/list'
-        return self.request(command).json()['tags']
+        r = self.paginate(command)
+        return [rr for a in r for rr in r['tags']]
 
 
     def clean_up(self):
