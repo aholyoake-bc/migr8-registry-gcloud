@@ -91,21 +91,20 @@ class MigrateToGcloud:
         self.GCLOUD_URL = os.environ.get('GCLOUD_URL')
         self.dockerpath = os.environ.get('DOCKERPATH')
         self.gcloudpath = os.environ.get('GCLOUDPATH')
-        repositories = self.catalog()
-        all_tags = {r: self.filter_tags(r,self.tags(r)) for r in repositories}
-        # try:
-        #        f = open("repo.pickle",'rb')
-        #            # Do something with the file
-        #        all_tags = pickle.load(f)
-        #except IOError:
-        #        print("File not accessible")
-        #        repositories = self.catalog()
-        #        all_tags = {r: self.filter_tags(r,self.tags(r)) for r in repositories}
-        #        f = open("repo.pickle",'wb')
-        #        pickle.dump(all_tags,f)
+        try:
+                f = open("repo.pickle",'rb')
+                    # Do something with the file
+                all_tags = pickle.load(f)
+        except IOError:
+                print("File not accessible")
+                repositories = self.catalog()
+                all_tags = {r: self.tags(r) for r in repositories}
+                all_tags = {r: self.filter_tags(r,ts) for r,ts in all_tags.items()}
+                f = open("repo.pickle",'wb')
+                pickle.dump(all_tags,f)
 
-        #finally:
-        #        f.close()
+        finally:
+                f.close()
 
 
         for r,v in all_tags.items():
@@ -113,20 +112,28 @@ class MigrateToGcloud:
     
         plist = [(r,t) for r,tt in all_tags.items() for t in tt]
 
-        with Pool(24) as p:
+        with Pool(48) as p:
             list(tqdm.tqdm(p.imap(upload, plist), total=len(plist)))
 
     def paginate(self,url):
         pagesize = 100
         link = True
-        page_url = url + '?n={}'.format(n)
+        page_url = url + '?n={}'.format(pagesize)
 
+        root_url = '/'.join(url.split('/')[0:3])
         pages = []
         while page_url:
             print(page_url)
             r = self.request(page_url)
-            page_url = r.links.get("next", None)
-            pages.append(r.json)
+            pages.append(r.json())
+
+            next_url = r.links.get("next", {}).get('url',None)
+            if next_url:
+                page_url = root_url + next_url
+            else:
+                page_url = None
+
+        return pages
 
     def request(self,uri):
         return requests.get(uri)
@@ -135,9 +142,10 @@ class MigrateToGcloud:
     # Get a catalog of repos from your existing repository
     def catalog(self):
         r = self.paginate(self.REG_PROTOCOL + self.REG_URL + '/v2/_catalog')
-        return [rr for a in r for rr in r['repositories']]
+        return [rr for a in r for rr in a['repositories']]
         
     def existing_tags(self, repo):
+        print("Getting already uploaded tags for {}".format(repo))
         command = self.gcloudpath + ' container images list-tags --format=json ' + self.GCLOUD_URL + '/' + repo
         checktags = subprocess.check_output(command, shell=True, executable='/bin/bash').decode()
         return [t for tags in json.loads(checktags) for t in tags['tags']]
@@ -150,7 +158,7 @@ class MigrateToGcloud:
         print('Fetching tags for {}'.format(repo))
         command = self.REG_PROTOCOL + self.REG_URL + '/v2/' + repo + '/tags/list'
         r = self.paginate(command)
-        return [rr for a in r for rr in r['tags']]
+        return [rr for a in r for rr in a['tags']]
 
 
     def clean_up(self):
