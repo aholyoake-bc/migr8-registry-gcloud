@@ -91,19 +91,21 @@ class MigrateToGcloud:
         self.GCLOUD_URL = os.environ.get('GCLOUD_URL')
         self.dockerpath = os.environ.get('DOCKERPATH')
         self.gcloudpath = os.environ.get('GCLOUDPATH')
-        try:
-                f = open("repo.pickle",'rb')
-                    # Do something with the file
-                all_tags = pickle.load(f)
-        except IOError:
-                print("File not accessible")
-                repositories = self.catalog()
-                all_tags = {r: self.filter_tags(r,self.tags(r)) for r in repositories}
-                f = open("repo.pickle",'wb')
-                pickle.dump(all_tags,f)
+        repositories = self.catalog()
+        all_tags = {r: self.filter_tags(r,self.tags(r)) for r in repositories}
+        # try:
+        #        f = open("repo.pickle",'rb')
+        #            # Do something with the file
+        #        all_tags = pickle.load(f)
+        #except IOError:
+        #        print("File not accessible")
+        #        repositories = self.catalog()
+        #        all_tags = {r: self.filter_tags(r,self.tags(r)) for r in repositories}
+        #        f = open("repo.pickle",'wb')
+        #        pickle.dump(all_tags,f)
 
-        finally:
-                f.close()
+        #finally:
+        #        f.close()
 
 
         for r,v in all_tags.items():
@@ -111,7 +113,7 @@ class MigrateToGcloud:
     
         plist = [(r,t) for r,tt in all_tags.items() for t in tt]
 
-        with Pool(8) as p:
+        with Pool(2) as p:
             list(tqdm.tqdm(p.imap(upload, plist), total=len(plist)))
 
 
