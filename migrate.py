@@ -5,15 +5,21 @@
 # It also assumes access to your private repository through the REG_URL
 
 import requests
+import pickle
 from requests.auth import HTTPBasicAuth
 import json
 import logging
 import ast
+import sys
 import subprocess
+from multiprocessing import Pool
 import os
+import tqdm
 
 os.path.abspath('/')
 
+logger = logging.getLogger('migrate')
+logger.setLevel(logging.DEBUG)
 ##########################################
 #  Examples for GCLOUD_URL AND REG_URL
 # export GCLOUD_URL="gcr.io/<project-name>"
@@ -30,6 +36,53 @@ os.environ.get('DOCKERUSER')
 os.environ.get('DOCKERPASSWORD')
 
 
+def upload(repo):
+    ip = ImageProcessor(repo[0],repo[1])
+    ip.do()
+
+class ImageProcessor:
+
+    def __init__(self,repo,tag):
+        self.REG_URL = os.environ.get('REG_URL')
+        self.REG_PROTOCOL = os.environ.get('REG_PROTOCOL')
+        self.GCLOUD_URL = os.environ.get('GCLOUD_URL')
+        self.dockerpath = os.environ.get('DOCKERPATH')
+        self.gcloudpath = os.environ.get('GCLOUDPATH')
+        self.repo = repo
+        self.tag = tag
+
+    def do(self):
+        self.download_images()
+        self.set_tag()
+        self.upload_image()
+
+
+    def download_images(self):
+        try:
+            command = (self.dockerpath + ' pull ' +
+                       self.REG_URL + '/' + self.repo + ':' + self.tag)
+            subprocess.check_output(command, shell=True, executable='/bin/bash')
+        except:
+            return
+
+    def set_tag(self):
+        try:
+            command = ('docker tag ' + self.REG_URL + '/' + self.repo +
+                       ':' + self.tag + ' ' + self.GCLOUD_URL + '/' + self.repo + ':' + self.tag)
+            subprocess.check_output(command, shell=True, executable='/bin/bash')
+        except:
+            return
+
+    def upload_image(self):
+        try:
+            command = ('docker push ' +
+                       self.GCLOUD_URL + '/' + self.repo + ':' + self.tag)
+            subprocess.check_output(command, shell=True, executable='/bin/bash')
+
+        except:
+            return
+
+
 class MigrateToGcloud:
     # Init some urls and paths for migration then call _get_catalog
     def __init__(self):
@@ -38,109 +91,63 @@ class MigrateToGcloud:
         self.GCLOUD_URL = os.environ.get('GCLOUD_URL')
         self.dockerpath = os.environ.get('DOCKERPATH')
         self.gcloudpath = os.environ.get('GCLOUDPATH')
-        self.dockeruser = os.environ.get('DOCKERUSER', None)
-        self.dockerpassword = os.environ.get("DOCKERPASSWORD", None)
-        self._get_catalog()
+        try:
+                f = open("repo.pickle",'rb')
+                    # Do something with the file
+                all_tags = pickle.load(f)
+        except IOError:
+                print("File not accessible")
+                repositories = self.catalog()
+                all_tags = {r: self.filter_tags(r,self.tags(r)) for r in repositories}
+                f = open("repo.pickle",'wb')
+                pickle.dump(all_tags,f)
 
-    def _request(self,uri):
-        if self.dockeruser is not None:
-            auth = HTTPBasicAuth(self.dockeruser, self.dockerpassword)
-            return requests.get(uri, auth=auth)
-        else:
-            return requests.get(uri)
+        finally:
+                f.close()
+
+
+        for r,v in all_tags.items():
+            print("{:40}: {}".format(r, len(v)))
+    
+        plist = [(r,t) for r,tt in all_tags.items() for t in tt]
+
+        with Pool(8) as p:
+            list(tqdm.tqdm(p.imap(upload, plist), total=len(plist)))
+
+
+    def request(self,uri):
+        return requests.get(uri)
 
 
     # Get a catalog of repos from your existing repository
-    def _get_catalog(self):
-        r = self._request(self.REG_PROTOCOL + self.REG_URL + '/v2/_catalog')
-        logging.debug("Test get Catalog: %r", r)
-        io = json.dumps(r.text)
-        n = json.loads(io)
-        line = ast.literal_eval(n)
-        mylist = line['repositories']
-        self._log = logging.debug("Test run: %r", mylist)
-        self._run(mylist)
+    def catalog(self):
+        r = self.request(self.REG_PROTOCOL + self.REG_URL + '/v2/_catalog')
+        a = r.json()
+        return a['repositories']
+        
+    def existing_tags(self, repo):
+        command = self.gcloudpath + ' container images list-tags --format=json ' + self.GCLOUD_URL + '/' + repo
+        checktags = subprocess.check_output(command, shell=True, executable='/bin/bash').decode()
+        return [t for tags in json.loads(checktags) for t in tags['tags']]
 
-    # primary run function to execute every thing else
-    def _run(self, mylist):
-        for line in mylist:
-            print(line)
-            command = self.gcloudpath + ' container images list-tags ' + self.GCLOUD_URL + '/' + line
-            checktags = subprocess.check_output(command, shell=True, executable='/bin/bash').decode()
-            taglist = self._get_tags(line)
-            for tag in taglist:
-                print("{line} {tag}".format(line=line, tag=tag))
-                tagvalue = self._check_tag(line, tag, checktags)
-                if tagvalue is False:
-                    self._download_images(line, tag)
-                    self._set_tag(line, tag)
-                    self._upload_image(line, tag)
-                else:
-                    print("Found " + line + ' ' + tag +
-                          " is already uploaded to Gcloud. Skipping")
-                    continue
-            self._clean_up()
+    def filter_tags(self, repo, tags):
+        existing_tags = self.existing_tags(repo)
+        return [t for t in tags if t not in existing_tags]
 
-    def _clean_up(self):
+    def tags(self, repo):
+        print('Fetching tags for {}'.format(repo))
+        command = self.REG_PROTOCOL + self.REG_URL + '/v2/' + repo + '/tags/list'
+        return self.request(command).json()['tags']
+
+
+    def clean_up(self):
         try:
            subprocess.check_output('docker system prune -f', shell=True, executable='/bin/bash')
         except:
            return
 
-    # Get version tags from existing repository so we can migrate all of them
-    def _get_tags(self, line):
-        command = self.REG_PROTOCOL + self.REG_URL + '/v2/' + line + '/tags/list'
-        checktags = self._request(command)
-        io = json.dumps(checktags.text)
-        n = json.loads(io)
-        tagline = ast.literal_eval(n)
-        try:
-            taglist = tagline['tags']
-        except:
-            taglist = tagline['tags'] = 'null'
-        return taglist
 
-    # Check if the version tag exists in new repository
-    def _check_tag(self, line, tag, checktags):
-        if tag in checktags:
-            return True
-        else:
-            return False
 
-    # Download images from existing registry
-    def _download_images(self, line, tag):
-        print ("######### Downloading " + line + ':' + tag +
-               " image from bitesize registry ##########################")
-        try:
-            command = (self.dockerpath + ' pull ' +
-                       self.REG_URL + '/' + line + ':' + tag)
-            subprocess.check_output(command, shell=True, executable='/bin/bash')
-        except:
-            return
-
-# Tag image for new registry
-    def _set_tag(self, line, tag):
-        print ("######### TAGGING " + line + ':' + tag +
-               " IMAGE FOR UPLOAD ################")
-        try:
-            command = ('docker tag ' + self.REG_URL + '/' + line +
-                       ':' + tag + ' ' + self.GCLOUD_URL + '/' + line + ':' + tag)
-            print(command)
-            subprocess.check_output(command, shell=True, executable='/bin/bash')
-        except:
-            return
-
-# Upload image to new registry
-    def _upload_image(self, line, tag):
-        print ("############### STARTING " + line + ':' + tag +
-               " IMAGE UPLOAD TO NEW REPO ###################")
-        try:
-            command = ('docker push ' +
-                       self.GCLOUD_URL + '/' + line + ':' + tag)
-            subprocess.check_output(command, shell=True, executable='/bin/bash')
-
-        except:
-            return
 
 
 MigrateToGcloud()
